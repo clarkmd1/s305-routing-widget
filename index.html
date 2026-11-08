@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>S305 Routing Explorer — Network Layer</title>
+<style>
+:root{--bg:#0b1220;--panel:#121b30;--panel2:#0d1526;--line:#24314f;--text:#e8eefb;--mut:#9db0d0;--blue:#5aa2ff;--gold:#fbbf24;--good:#3ddc97;--bad:#ff6b6b;--crim:#9d2235}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 20px;background:linear-gradient(90deg,#6f1626,var(--crim))}
+.k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#f3d9dd}
+h1{margin:2px 0 0;font-size:21px}.sub{font-size:12.5px;color:#f0cdd3}
+.modes{display:flex;gap:8px}
+.mode{border:1px solid #ffffff44;background:#00000022;color:#fff;padding:9px 16px;border-radius:99px;font-weight:700;cursor:pointer;font-size:14px}
+.mode.active{background:#fff;color:var(--crim);border-color:#fff}
+main{max-width:1250px;margin:0 auto;padding:16px 18px 30px}
+.hidden{display:none!important}
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}
+select{background:#0a1120;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px}
+input[type=checkbox]{accent-color:var(--blue)}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mut);padding-bottom:9px}
+.btn{border:1px solid var(--line);background:#0a1120;color:var(--text);border-radius:8px;padding:9px 14px;font-size:14px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#071229}
+.btn:disabled{opacity:.5;cursor:default}
+.btn:focus-visible,select:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.node:focus-visible rect,.node:focus-visible circle{stroke:#fff;stroke-width:3}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.chips span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}
+.chip{border:1px dashed var(--line);background:transparent;color:var(--mut);border-radius:99px;padding:6px 11px;font-size:12.5px;cursor:pointer}
+.chip:hover{color:var(--text);border-color:var(--blue)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 375px;gap:14px;margin-top:14px}
+@media(max-width:1020px){.grid{grid-template-columns:1fr}}
+.svgwrap{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px}
+svg{width:100%;height:auto;display:block}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:430px;overflow:hidden}
+.stabs{display:flex;border-bottom:1px solid var(--line)}
+.stabs button{flex:1;background:none;border:0;color:var(--mut);padding:10px;cursor:pointer;font-weight:700;font-size:13px}
+.stabs button.active{color:var(--text);background:var(--panel2);box-shadow:inset 0 -2px 0 var(--blue)}
+.pane{padding:12px;overflow-y:auto;flex:1;max-height:600px}
+.entry{padding:8px 10px;border-left:3px solid var(--line);margin-bottom:8px;border-radius:6px;background:var(--panel2);font-size:13.5px}
+.entry.info{border-color:#64748b}.entry.dns{border-color:#a78bfa}.entry.arp{border-color:#f472b6}.entry.route{border-color:var(--blue)}.entry.move{border-color:#38bdf8}.entry.ok{border-color:var(--good)}.entry.bad{border-color:var(--bad)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#080f1d;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.note{color:var(--mut);font-size:12.5px;margin:8px 0 0}
+.badge{display:inline-block;background:#3a2b12;color:var(--gold);border:1px solid #6b5416;padding:2px 9px;border-radius:99px;font-size:12px;margin:2px 0 6px}
+.rtable{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.rtable th,.rtable td{border:1px solid var(--line);padding:5px 8px;text-align:left}
+.rtable th{background:#0a1120;color:var(--mut);font-weight:600}
+.rtable tr.def td{color:var(--gold)}
+h3{margin:4px 0 6px;font-size:16px}
+.bus{stroke:#3a4a6e;stroke-width:10;stroke-linecap:round}
+.link{stroke:#3a4a6e;stroke-width:2.5;fill:none}
+.cloud{fill:#141f38;stroke:#9db0d0;stroke-dasharray:5 4;stroke-width:1.5}
+.node{cursor:pointer}
+.node rect{fill:#16233f;stroke:#3a4a6e;stroke-width:2}
+.node circle{fill:#1b2a4a;stroke:#5aa2ff;stroke-width:2}
+.node:hover rect,.node:hover circle{stroke:var(--gold)}
+.node.selected rect,.node.selected circle{stroke:var(--gold);stroke-width:3.5}
+.node.hl circle{stroke:var(--gold);stroke-width:4}
+.t{fill:var(--text);font-size:14px}.t.bold{font-weight:700}.t.small{font-size:12px}.t.tiny{font-size:11px;fill:var(--mut)}
+.pkt{fill:var(--gold);stroke:#ffffff88;stroke-width:1.5}
+.levtabs{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.levtabs button{border:1px solid var(--line);background:var(--panel);color:var(--mut);border-radius:99px;padding:8px 14px;font-size:13.5px;cursor:pointer;font-weight:600}
+.levtabs button.active{color:#071229;background:var(--blue);border-color:var(--blue)}
+.levtabs button.done{border-color:var(--good);color:var(--good)}
+.levtabs button.done.active{background:var(--good);color:#06251a}
+.builder{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.thead{display:grid;grid-template-columns:1fr 92px 36px;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:6px}
+.trow{display:grid;grid-template-columns:1fr 92px 36px;gap:8px;margin-bottom:8px}
+.trow .del{border:1px solid var(--line);background:transparent;color:var(--bad);border-radius:8px;cursor:pointer;font-size:14px}
+.cactions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.fb{border-radius:10px;padding:12px 14px;margin-top:12px;border:1px solid;font-size:14px}
+.fb.good{border-color:var(--good);background:#0d2b22}
+.fb.bad{border-color:var(--bad);background:#2b1414}
+.fb ul{margin:6px 0 0;padding-left:18px}
+.hint{background:#1a2340;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13.5px}
+footer{color:var(--mut);text-align:center;font-size:12.5px;padding:16px;border-top:1px solid var(--line);margin-top:20px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <div class="k">BUS-S 305 · Technology Infrastructure · Lecture 5</div>
+    <h1>Routing Explorer</h1>
+    <div class="sub">How routing tables move packets across the 10.10.x network — the network layer in action</div>
+  </div>
+  <nav class="modes" aria-label="Widget modes">
+    <button id="tabExplore" class="mode active" aria-pressed="true">🗺️ Explore</button>
+    <button id="tabChallenge" class="mode" aria-pressed="false">🏆 Table Challenge</button>
+  </nav>
+</header>
+<main>
+  <section id="viewExplore">
+    <div class="controls">
+      <div class="fld"><label for="fromSel">From (source subnet)</label><select id="fromSel"></select></div>
+      <div class="fld"><label for="toSel">To (destination)</label><select id="toSel"></select></div>
+      <label class="chk"><input type="checkbox" id="chkDns"> Destination known only by name (DNS needed)</label>
+      <label class="chk"><input type="checkbox" id="chkArp"> Client knows only its DHCP config (ARP needed)</label>
+      <button id="sendBtn" class="btn primary">📦 Send packet</button>
+      <div class="chips"><span>Team exercise:</span>
+        <button class="chip" id="chipQ1">Q1 · inside subnet</button>
+        <button class="chip" id="chipQ2">Q2 · outside, all known</button>
+        <button class="chip" id="chipQ3">Q3 · needs DNS</button>
+        <button class="chip" id="chipQ4">Q4 · needs DNS + ARP</button>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="svgwrap"><svg id="topo" viewBox="0 0 920 620" role="img" aria-label="Network diagram: five subnets (10.10.51.x, 10.10.52.x, 10.10.53.x, 10.10.70.x, 10.10.34.x) on the left, each linked to its router on the 10.10.250.x backbone. A campus gateway connects the backbone to the Internet. Click any router or subnet to inspect it."></svg></div>
+      <aside class="side">
+        <div class="stabs">
+          <button id="paneLogBtn" class="active">Packet log</button>
+          <button id="paneInspBtn">Inspector</button>
+        </div>
+        <div id="paneLog" class="pane" aria-live="polite"></div>
+        <div id="paneInsp" class="pane hidden"></div>
+      </aside>
+    </div>
+  </section>
+  <section id="viewChallenge" class="hidden">
+    <div class="levtabs" id="levTabs"></div>
+    <div class="builder">
+      <div id="chPrompt"></div>
+      <div class="thead"><span>Destination</span><span>Interface</span><span></span></div>
+      <div id="rowsBox"></div>
+      <div class="cactions">
+        <button id="addRow" class="btn">＋ Add row</button>
+        <button id="checkBtn" class="btn primary">Check my table</button>
+        <button id="hintBtn" class="btn">💡 Hint</button>
+        <button id="resetBtn" class="btn">Reset</button>
+      </div>
+      <div id="chHint" class="hint hidden"></div>
+      <div id="chFeedback"></div>
+    </div>
+  </section>
+</main>
+<footer>Built for BUS-S 305 · Kelley School of Business · based on Lecture 5 (Network &amp; Transport Layers), slides 41–47 and 55–60</footer>
+<noscript>This widget requires JavaScript.</noscript>
+<script>
+'use strict';
+var $=function(s){return document.querySelector(s)};
+var SUBNETS=[{id:'51',addr:'10.10.51.x',c:80},{id:'52',addr:'10.10.52.x',c:190},{id:'53',addr:'10.10.53.x',c:300},{id:'70',addr:'10.10.70.x',c:410},{id:'34',addr:'10.10.34.x',c:520}];
+var ROUTERS=[
+ {id:'r51',addr:'10.10.250.51',sub:'51',c:80,derived:false,note:''},
+ {id:'r52',addr:'10.10.250.52',sub:'52',c:190,derived:false,note:''},
+ {id:'r53',addr:'10.10.250.53',sub:'53',c:300,derived:true,note:'Slide 43 asks <em>you</em> to design this table. This is one valid answer — compare it with Router 51’s.'},
+ {id:'r70',addr:'10.10.250.70',sub:'70',c:410,derived:false,note:'The minimal two-row table from slide 42: own subnet first, “Any Other” (the backbone) last.'},
+ {id:'r34',addr:'10.10.250.34',sub:'34',c:520,derived:true,note:'Derived from the same rules (slide 43 hands-on). Interface 0 here connects straight to the campus gateway.'}];
+var TABLES={
+ r51:[{d:'10.10.51.x',i:1,nh:'local'},{d:'10.10.250.52',i:2,nh:'r52'},{d:'10.10.52.x',i:2,nh:'r52'},{d:'10.10.250.53',i:2,nh:'r53'},{d:'10.10.53.x',i:2,nh:'r53'},{d:'10.10.250.70',i:2,nh:'r70'},{d:'10.10.70.x',i:2,nh:'r70'},{d:'10.10.250.34',i:3,nh:'r34'},{d:'10.10.34.x',i:3,nh:'r34'},{d:'0.0.0.0',i:0,nh:'backbone'}],
+ r52:[{d:'10.10.52.x',i:1,nh:'local'},{d:'10.10.250.53',i:2,nh:'r53'},{d:'10.10.53.x',i:2,nh:'r53'},{d:'10.10.250.70',i:3,nh:'r70'},{d:'10.10.70.x',i:3,nh:'r70'},{d:'0.0.0.0',i:0,nh:'backbone'}],
+ r53:[{d:'10.10.53.x',i:1,nh:'local'},{d:'10.10.250.52',i:2,nh:'r52'},{d:'10.10.52.x',i:2,nh:'r52'},{d:'10.10.250.51',i:2,nh:'r51'},{d:'10.10.51.x',i:2,nh:'r51'},{d:'10.10.250.70',i:2,nh:'r70'},{d:'10.10.70.x',i:2,nh:'r70'},{d:'10.10.250.34',i:3,nh:'r34'},{d:'10.10.34.x',i:3,nh:'r34'},{d:'0.0.0.0',i:0,nh:'backbone'}],
+ r70:[{d:'10.10.70.x',i:1,nh:'local'},{d:'0.0.0.0',i:0,nh:'backbone'}],
+ r34:[{d:'10.10.34.x',i:1,nh:'local'},{d:'10.10.250.51',i:2,nh:'r51'},{d:'10.10.51.x',i:2,nh:'r51'},{d:'10.10.250.52',i:2,nh:'r52'},{d:'10.10.52.x',i:2,nh:'r52'},{d:'10.10.250.53',i:2,nh:'r53'},{d:'10.10.53.x',i:2,nh:'r53'},{d:'10.10.250.70',i:2,nh:'r70'},{d:'10.10.70.x',i:2,nh:'r70'},{d:'0.0.0.0',i:0,nh:'internet'}]
+};
+function setMode(m){
+ var ex=m==='explore';
+ $('#viewExplore').classList.toggle('hidden',!ex);
+ $('#viewChallenge').classList.toggle('hidden',ex);
+ $('#tabExplore').classList.toggle('active',ex);
+ $('#tabChallenge').classList.toggle('active',!ex);
+ $('#tabExplore').setAttribute('aria-pressed',ex?'true':'false');
+ $('#tabChallenge').setAttribute('aria-pressed',ex?'false':'true');
+}
+$('#tabExplore').onclick=function(){setMode('explore')};
+$('#tabChallenge').onclick=function(){setMode('challenge')};
+function buildSVG(){
+ var s='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3a4a6e"/></marker></defs>';
+ s+='<line x1="490" y1="60" x2="490" y2="540" class="bus"/>';
+ s+='<line x1="490" y1="60" x2="636" y2="78" class="link"/>';
+ s+='<g class="node" data-id="gw" tabindex="0" role="button" aria-label="Campus gateway to the Internet"><ellipse cx="700" cy="80" rx="66" ry="38" class="cloud"/><text x="700" y="76" class="t small" text-anchor="middle">Campus</text><text x="700" y="92" class="t small" text-anchor="middle">Gateway</text></g>';
+ s+='<line x1="766" y1="80" x2="852" y2="80" class="link" marker-end="url(#ah)"/>';
+ s+='<text x="912" y="84" class="t small" text-anchor="end">Internet</text>';
+ ROUTERS.forEach(function(r){var c=r.c;
+  s+='<line x1="230" y1="'+c+'" x2="374" y2="'+c+'" class="link"/>';
+  s+='<text x="302" y="'+(c-8)+'" class="t tiny" text-anchor="middle">if 1</text>';
+  s+='<line x1="426" y1="'+c+'" x2="490" y2="'+c+'" class="link"/>';
+ });
+ SUBNETS.forEach(function(sn){
+  s+='<g class="node subnet" data-id="'+sn.id+'" tabindex="0" role="button" aria-label="Subnet '+sn.addr+'"><rect x="40" y="'+(sn.c-32)+'" width="190" height="64" rx="10"/><text x="135" y="'+(sn.c-6)+'" class="t tiny" text-anchor="middle">Subnet</text><text x="135" y="'+(sn.c+16)+'" class="t bold" text-anchor="middle">'+sn.addr+'</text></g>';
+ });
+ ROUTERS.forEach(function(r){
+  s+='<g class="node router" data-id="'+r.id+'" tabindex="0" role="button" aria-label="Router '+r.addr+'"><circle cx="400" cy="'+r.c+'" r="26"/><text x="400" y="'+(r.c+5)+'" class="t tiny" text-anchor="middle">R</text><text x="400" y="'+(r.c+46)+'" class="t tiny" text-anchor="middle">'+r.addr+'</text></g>';
+ });
+ s+='<text x="490" y="590" class="t tiny" text-anchor="middle">Backbone BN · 10.10.250.x</text>';
+ s+='<circle id="pkt" r="9" class="pkt" style="display:none"/>';
+ $('#topo').innerHTML=s;
+}
+function nhLabel(nh){if(nh==='local')return'deliver locally';if(nh==='backbone')return'onto backbone';if(nh==='internet')return'campus gateway';var r=ROUTERS.find(function(x){return x.id===nh});return r?r.addr:nh;}
+function markSelected(id){document.querySelectorAll('#topo .node').forEach(function(n){n.classList.toggle('selected',n.getAttribute('data-id')===id)});}
+function switchPane(p){
+ var lg=p==='log';
+ $('#paneLog').classList.toggle('hidden',!lg);
+ $('#paneInsp').classList.toggle('hidden',lg);
+ $('#paneLogBtn').classList.toggle('active',lg);
+ $('#paneInspBtn').classList.toggle('active',!lg);
+}
+$('#paneLogBtn').onclick=function(){switchPane('log')};
+$('#paneInspBtn').onclick=function(){switchPane('insp')};
+function showRouter(id){
+ var r=ROUTERS.find(function(x){return x.id===id});if(!r)return;
+ var rows=TABLES[id].map(function(row){return '<tr'+(row.d==='0.0.0.0'?' class="def"':'')+'><td class="mono">'+row.d+'</td><td>'+row.i+'</td><td class="mono">'+nhLabel(row.nh)+'</td></tr>'}).join('');
+ $('#paneInsp').innerHTML='<h3>Router '+r.addr+'</h3>'+(r.derived?'<span class="badge">Derived — design it yourself (slide 43)</span>':'')+(r.note?'<p class="note">'+r.note+'</p>':'')+'<table class="rtable"><thead><tr><th>Destination</th><th>Iface</th><th>Next hop</th></tr></thead><tbody>'+rows+'</tbody></table><p class="note">Rule of thumb (slide 43): first row → own subnet · last row → “Any Other” (0.0.0.0).</p>';
+ switchPane('insp');markSelected(id);
+}
+function showSubnet(id){
+ var sn=SUBNETS.find(function(x){return x.id===id});var r=ROUTERS.find(function(x){return x.sub===id});
+ $('#paneInsp').innerHTML='<h3>Subnet '+sn.addr+'</h3><p>All computers here share the network prefix <span class="mono">'+sn.addr+'</span> and reach the rest of the world through <b>Router '+r.addr+'</b> (its interface 1).</p><p class="note">A /24-style subnet: 254 usable host addresses (10.10.'+id+'.1 – 10.10.'+id+'.254). Slide 35 asks the same question about 128.184.2.x.</p>';
+ switchPane('insp');markSelected(id);
+}
+function showGateway(){
+ $('#paneInsp').innerHTML='<h3>Campus Gateway → Internet</h3><p>Every router’s last row — <span class="mono">0.0.0.0 (Any Other)</span> — ultimately points toward here. Router <b>10.10.250.34</b> connects directly to the gateway on interface 0 (slide 42).</p><p class="note">Packets leaving for the Internet keep their 10.10.x.x source IP in the header; NAT at the edge translates it (the private-IP slides).</p>';
+ switchPane('insp');markSelected('gw');
+}
+function nodeClick(id){if(id==='gw')showGateway();else if(ROUTERS.some(function(r){return r.id===id}))showRouter(id);else showSubnet(id);}
+$('#topo').addEventListener('click',function(e){var g=e.target.closest('.node');if(g)nodeClick(g.getAttribute('data-id'))});
+$('#topo').addEventListener('keydown',function(e){if(e.key!=='Enter'&&e.key!==' ')return;var g=e.target.closest('.node');if(g){e.preventDefault();nodeClick(g.getAttribute('data-id'))}});
+function log(html,cls){var d=document.createElement('div');d.className='entry '+(cls||'info');d.innerHTML=html;$('#paneLog').prepend(d);}
+function pause(ms){return new Promise(function(res){setTimeout(res,ms)})}
+function flash(id){var g=document.querySelector('#topo .node[data-id="'+id+'"]');if(!g)return;g.classList.add('hl');setTimeout(function(){g.classList.remove('hl')},700);}
+var reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function animateAlong(pts){
+ return new Promise(function(res){
+  var pkt=$('#pkt');
+  if(reduced||!pkt){res();return;}
+  var L=0,segs=[],k;
+  for(k=0;k<pts.length-1;k++){var dx=pts[k+1][0]-pts[k][0],dy=pts[k+1][1]-pts[k][1],l=Math.hypot(dx,dy);segs.push(l);L+=l;}
+  if(L===0){res();return;}
+  var dur=Math.max(300,L/0.5),t0=performance.now();
+  pkt.style.display='';
+  function frame(t){
+   var el=Math.min(1,(t-t0)/dur),d=el*L,k2=0;
+   while(k2<segs.length-1&&d>segs[k2]){d-=segs[k2];k2++;}
+   var f=segs[k2]?d/segs[k2]:0;
+   pkt.setAttribute('cx',pts[k2][0]+(pts[k2+1][0]-pts[k2][0])*f);
+   pkt.setAttribute('cy',pts[k2][1]+(pts[k2+1][1]-pts[k2][1])*f);
+   if(el<1){requestAnimationFrame(frame);}else{pkt.style.display='none';res();}
+  }
+  requestAnimationFrame(frame);
+ });
+}
+function sub2router(c){return[[230,c],[374,c]]}
+function router2sub(c){return[[374,c],[230,c]]}
+function r2r(a,b){return[[426,a],[490,a],[490,b],[426,b]]}
+function r2cloud(c){return[[426,c],[490,c],[490,60],[636,78]]}
+function cloud2net(){return[[766,80],[846,80]]}
+function sameSub(c){return[[100,c+14],[135,c+26],[170,c+14]]}
+function matchRow(rid,dstId){
+ var tbl=TABLES[rid];
+ for(var k=0;k<tbl.length;k++){var row=tbl[k];
+  if(row.d==='0.0.0.0')return row;
+  if(dstId!=='net'&&row.d==='10.10.'+dstId+'.x')return row;
+ }
+ return null;
+}
+function dstLabel(dstId){return dstId==='net'?'the Internet (www.google.com)':'10.10.'+dstId+'.x'}
+var running=false;
+function done(){running=false;$('#sendBtn').disabled=false;log('<span style="opacity:.5">— end of trace —</span>','info');}
+async function runPacket(){
+ if(running)return;running=true;$('#sendBtn').disabled=true;
+ $('#paneLog').innerHTML='';switchPane('log');
+ var srcId=$('#fromSel').value,dstId=$('#toSel').value;
+ var dns=$('#chkDns').checked,dhcp=$('#chkArp').checked;
+ var same=srcId===dstId;
+ var src=SUBNETS.find(function(s){return s.id===srcId});
+ var srcR=ROUTERS.find(function(r){return r.sub===srcId});
+ log('📦 New packet: a computer in <b>'+src.addr+'</b> → <b>'+dstLabel(dstId)+'</b>','info');
+ if(dns&&!same){log('🔍 <b>DNS lookup</b> — the client only knows the name, so it asks the IU DNS server: <span class="mono">www.server.kelley.iu.edu → 10.10.'+dstId+'.7</span>','dns');await pause(600);}
+ if(dhcp&&!same){log('📡 <b>ARP</b> — the client knows nothing beyond its DHCP config, so it broadcasts an ARP request for its router (<span class="mono">'+srcR.addr+'</span>) and gets <span class="mono">01-0C-A0-'+srcId+'-88-A1</span> back.','arp');await pause(600);}
+ if(same){
+  log('🧭 Destination is in the <b>same subnet</b> — no router needed. The sender ARPs for the destination’s MAC and delivers the frame directly.','route');
+  await pause(500);
+  await animateAlong(sameSub(src.c));
+  log('✅ Delivered inside '+src.addr+'. No router ever touched this packet — that’s Question 1 of the team exercise.','ok');
+  done();return;
+ }
+ await animateAlong(sub2router(src.c));flash(srcR.id);
+ var cur=srcR,hops=0;
+ while(hops<8){
+  hops++;
+  var row=matchRow(cur.id,dstId);
+  if(!row){log('❌ No matching row and no default route at '+cur.addr+' — packet dropped.','bad');break;}
+  log('🧭 <b>'+cur.addr+'</b> matches <span class="mono">'+row.d+' → if '+row.i+'</span>'+(row.nh==='local'?' — directly connected':''),'route');
+  await pause(450);
+  if(row.nh==='local'){
+   await animateAlong(router2sub(SUBNETS.find(function(s){return s.id===dstId}).c));
+   log('✅ Delivered to a host in '+dstLabel(dstId)+'. The IP header never changed in transit — only the MAC addresses changed at each hop (slide 58).','ok');
+   break;
+  }
+  if(row.nh==='internet'){
+   log('↔️ Forwarded out interface '+row.i+' — this router IS the gateway to the Internet.','move');
+   await animateAlong(r2cloud(cur.c));await animateAlong(cloud2net());
+   log('🌐 Out to the Internet. (At the edge, NAT translates the private 10.10.x.x source address — the private-IP story from this lecture.)','ok');
+   break;
+  }
+  if(row.nh==='backbone'){
+   if(dstId==='net'){
+    log('↔️ Default route — onto the backbone (10.10.250.x), headed for the campus gateway.','move');
+    await animateAlong(r2cloud(cur.c));await animateAlong(cloud2net());
+    log('🌐 Out to the Internet via the campus gateway. (NAT at the edge translates the private 10.10.x.x source address.)','ok');
+    break;
+   }
+   var nxt=ROUTERS.find(function(r){return r.sub===dstId});
+   log('↔️ “Any Other” → onto the backbone — picked up by <b>'+nxt.addr+'</b>, the router toward '+dstLabel(dstId)+'.','move');
+   await animateAlong(r2r(cur.c,nxt.c));flash(nxt.id);
+   cur=nxt;continue;
+  }
+  var nxt2=ROUTERS.find(function(r){return r.id===row.nh});
+  log('↔️ Forwarded out interface '+row.i+' to <b>'+nxt2.addr+'</b>','move');
+  await animateAlong(r2r(cur.c,nxt2.c));flash(nxt2.id);
+  cur=nxt2;
+ }
+ done();
+}
+$('#sendBtn').onclick=runPacket;
+function syncToggles(){var same=$('#fromSel').value===$('#toSel').value;$('#chkDns').disabled=same;$('#chkArp').disabled=same;if(same){$('#chkDns').checked=false;$('#chkArp').checked=false;}}
+$('#fromSel').addEventListener('change',syncToggles);
+$('#toSel').addEventListener('change',syncToggles);
+function setAndRun(f,t,dns,arp){$('#fromSel').value=f;$('#toSel').value=t;$('#chkDns').checked=!!dns;$('#chkArp').checked=!!arp;syncToggles();runPacket();}
+$('#chipQ1').onclick=function(){setAndRun('51','51',false,false)};
+$('#chipQ2').onclick=function(){setAndRun('51','34',false,false)};
+$('#chipQ3').onclick=function(){setAndRun('51','34',true,false)};
+$('#chipQ4').onclick=function(){setAndRun('51','34',true,true)};
+var DESTS=[{v:'10.10.51.x',l:'10.10.51.x'},{v:'10.10.52.x',l:'10.10.52.x'},{v:'10.10.53.x',l:'10.10.53.x'},{v:'10.10.70.x',l:'10.10.70.x'},{v:'10.10.34.x',l:'10.10.34.x'},{v:'10.10.250.51',l:'10.10.250.51 (router 51 on the BN)'},{v:'10.10.250.52',l:'10.10.250.52 (router 52 on the BN)'},{v:'10.10.250.53',l:'10.10.250.53 (router 53 on the BN)'},{v:'10.10.250.70',l:'10.10.250.70 (router 70 on the BN)'},{v:'10.10.250.34',l:'10.10.250.34 (router 34 on the BN)'},{v:'10.10.x.x',l:'10.10.x.x (summary — any 10.10 subnet)'},{v:'0.0.0.0',l:'0.0.0.0 (Any Other)'}];
+var LEVELS=[
+ {id:1,tab:'1 · Build the full table',title:'Build Router 51’s complete table',blurb:'Router <b>10.10.250.51</b> needs its complete routing table — every destination it can reach, and which interface it uses (this is the table from slide 45). Add one row for each destination.',answer:[['10.10.51.x',1],['10.10.250.52',2],['10.10.52.x',2],['10.10.250.53',2],['10.10.53.x',2],['10.10.250.70',2],['10.10.70.x',2],['10.10.250.34',3],['10.10.34.x',3],['0.0.0.0',0]],hint:'<b>Rules (slide 43):</b> first row → the router’s own subnet (interface 1). Last row → “Any Other” (0.0.0.0). For each <em>other</em> subnet: one row for that subnet’s router on the backbone (10.10.250.X), and one row for the subnet itself. Watch the interfaces — the 52/53/70 side rides interface 2; the 34 side rides interface 3.',success:'Exactly the 10-row table from slide 45.',watch:['51','34']},
+ {id:2,tab:'2 · Simplify it',title:'Simplify Router 51’s table',blurb:'Slide 46 asks: <em>“Can you simplify this routing table?”</em> Collapse rows that share the same interface into one summary row — but keep the rows that must stay specific.',answer:[['10.10.51.x',1],['10.10.250.34',3],['10.10.34.x',3],['10.10.x.x',2],['0.0.0.0',0]],hint:'Which rows share interface 2 AND the same next stop? They all collapse into <span class="mono">10.10.x.x → if 2</span>. Why must 10.10.34.x and 10.10.250.34 stay explicit? (They use a different interface.)',success:'Exactly the simplified 5-row table from slide 47 — half the rows, same routing.',watch:['51','70']},
+ {id:3,tab:'3 · Router 52',title:'Build Router 52’s table',blurb:'Now build the table for <b>Router 10.10.250.52</b> (slide 44). Careful — its interface numbers are <em>not</em> the same as Router 51’s.',answer:[['10.10.52.x',1],['10.10.250.53',2],['10.10.53.x',2],['10.10.250.70',3],['10.10.70.x',3],['0.0.0.0',0]],hint:'Own subnet → interface 1. The 53 side → interface 2. The 70 side → interface 3. Last row → “Any Other”.',success:'Matches slide 44 row for row — and note how its interfaces differ from Router 51’s.',watch:['52','70']}
+];
+var curLevel=1,userRows=[],doneLevels=[];
+try{doneLevels=JSON.parse(localStorage.getItem('s305-routing-done')||'[]')}catch(e){doneLevels=[]}
+function saveDone(){try{localStorage.setItem('s305-routing-done',JSON.stringify(doneLevels))}catch(e){}}
+function renderLevelTabs(){
+ $('#levTabs').innerHTML=LEVELS.map(function(lv){var done=doneLevels.indexOf(lv.id)>=0;return '<button data-lv="'+lv.id+'" class="'+(lv.id===curLevel?'active':'')+(done?' done':'')+'">'+(done?'★ ':'')+lv.tab+'</button>'}).join('');
+}
+$('#levTabs').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;curLevel=parseInt(b.getAttribute('data-lv'),10);renderChallenge();});
+function renderChallenge(){
+ var lv=LEVELS.find(function(l){return l.id===curLevel});
+ renderLevelTabs();
+ $('#chPrompt').innerHTML='<h3>Level '+lv.id+' — '+lv.title+'</h3><p>'+lv.blurb+'</p>';
+ $('#chHint').classList.add('hidden');
+ $('#chFeedback').innerHTML='';
+ userRows=[];
+ renderRows();
+}
+function renderRows(){
+ var html=userRows.map(function(r,idx){return '<div class="trow"><select data-k="d" data-i="'+idx+'" aria-label="Destination, row '+(idx+1)+'">'+DESTS.map(function(o){return '<option value="'+o.v+'"'+(o.v===r.d?' selected':'')+'>'+o.l+'</option>'}).join('')+'</select><select data-k="i" data-i="'+idx+'" aria-label="Interface, row '+(idx+1)+'">'+[0,1,2,3].map(function(n){return '<option value="'+n+'"'+(String(n)===String(r.i)?' selected':'')+'>'+n+'</option>'}).join('')+'</select><button class="del" data-del="'+idx+'" aria-label="Remove row '+(idx+1)+'">✕</button></div>'}).join('');
+ $('#rowsBox').innerHTML=html||'<p class="note">No rows yet — build the table with “Add row”.</p>';
+}
+$('#addRow').onclick=function(){userRows.push({d:DESTS[0].v,i:1});renderRows();};
+$('#rowsBox').addEventListener('change',function(e){var s=e.target;if(s.tagName!=='SELECT')return;var idx=parseInt(s.getAttribute('data-i'),10);if(s.getAttribute('data-k')==='d')userRows[idx].d=s.value;else userRows[idx].i=parseInt(s.value,10);});
+$('#rowsBox').addEventListener('click',function(e){var b=e.target.closest('.del');if(!b)return;userRows.splice(parseInt(b.getAttribute('data-del'),10),1);renderRows();});
+$('#hintBtn').onclick=function(){$('#chHint').innerHTML=LEVELS.find(function(l){return l.id===curLevel}).hint;$('#chHint').classList.remove('hidden');};
+$('#resetBtn').onclick=renderChallenge;
+$('#checkBtn').onclick=function(){
+ var lv=LEVELS.find(function(l){return l.id===curLevel});
+ var rows=userRows.filter(function(r){return r.d});
+ var seen={},dups=0;
+ rows.forEach(function(r){var k=r.d+'|'+r.i;if(seen[k])dups++;seen[k]=true;});
+ var want={};lv.answer.forEach(function(a){want[a[0]+'|'+a[1]]=true});
+ var missing=Object.keys(want).filter(function(k){return !seen[k]}).length;
+ var wrong=Object.keys(seen).filter(function(k){return !want[k]});
+ var fb=$('#chFeedback');
+ if(!missing&&!wrong.length&&!dups){
+  if(doneLevels.indexOf(lv.id)<0){doneLevels.push(lv.id);saveDone();}
+  renderLevelTabs();
+  fb.innerHTML='<div class="fb good">🎉 <b>Correct!</b> '+lv.success+'<br><button class="btn" id="watchBtn" style="margin-top:8px">▶ Watch a packet use this router</button>'+(lv.id===2?'<p class="note" style="margin-top:8px">(Explore animates the full table — your simplified version routes the very same packets.)</p>':'')+'</div>';
+  $('#watchBtn').onclick=function(){setMode('explore');setAndRun(lv.watch[0],lv.watch[1],false,false);};
+ }else{
+  var h='<div class="fb bad"><b>Not quite yet.</b> '+rows.length+' row'+(rows.length===1?'':'s')+' checked.';
+  if(missing)h+='<p>You’re missing '+missing+' row'+(missing===1?'':'s')+' — check every connected subnet <em>and</em> its router’s backbone address, plus the first and last rows.</p>';
+  if(wrong.length)h+='<ul>'+wrong.map(function(k){var p=k.split('|');return '<li>Check this row: <span class="mono">'+p[0]+' → if '+p[1]+'</span></li>'}).join('')+'</ul>';
+  if(dups)h+='<p>Duplicate rows found — each destination should appear once.</p>';
+  h+='<p class="note">Tip: use the Hint, and remember the slide 43 rules — own subnet first, “Any Other” last.</p></div>';
+  fb.innerHTML=h;
+ }
+};
+buildSVG();
+$('#fromSel').innerHTML=SUBNETS.map(function(s){return '<option value="'+s.id+'">A computer in '+s.addr+'</option>'}).join('');
+$('#toSel').innerHTML=SUBNETS.map(function(s){return '<option value="'+s.id+'">A computer in '+s.addr+'</option>'}).join('')+'<option value="net">🌐 The Internet (www.google.com)</option>';
+$('#toSel').value='34';
+syncToggles();
+log('👋 Click any router to inspect its routing table, or any subnet for details. Then pick a source + destination and <b>Send packet</b> — or run a team-exercise scenario (Q1–Q4).','info');
+showRouter('r51');switchPane('log');
+renderChallenge();
+setMode('explore');
+</script>
+</body>
+</html>
